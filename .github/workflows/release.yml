@@ -1,0 +1,26 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # WabaUI.toc ships "@toc-version-forever@" as its Interface value so
+      # local dev builds (tools/deploy.sh) can stamp it with whatever the
+      # current WoW Forever beta interface number is, without touching
+      # committed source every time the beta updates. The packager never runs
+      # that script, so resolve the same placeholder here, to the same
+      # number, before handing off - bump this alongside tools/deploy.sh's
+      # `forever=` value whenever the beta's interface number changes.
+      - name: Resolve TOC interface version
+        run: sed -i 's/@toc-version-forever@/120100/' WabaUI.toc
+
+      - uses: BigWigsMods/packager@v2
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
