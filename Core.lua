@@ -2,13 +2,13 @@
 -- and the Settings-API options panel. Skin.lua owns the actual reskinning;
 -- this file only decides whether it should be applied.
 
-WabaDark = WabaDark or {}
-local WabaDark = WabaDark
+WabaUI = WabaUI or {}
+local WabaUI = WabaUI
 
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("ADDON_LOADED")
 
--- One darkness slider per skin category (WabaDark.DEFAULT_INTENSITY, set in
+-- One darkness slider per skin category (WabaUI.DEFAULT_INTENSITY, set in
 -- Skin.lua). "overall" is a master multiplier shown at the top level; the
 -- rest are grouped into a "Windows" subcategory since they're all standard
 -- panels, each wanting its own amount of darkening.
@@ -53,28 +53,28 @@ local WINDOW_INTENSITY = {
 -- it: darkness controls how far a piece lerps, this controls what color it
 -- lerps toward. Defaults to whatever the master swatch currently holds, so
 -- every panel starts out matching it until individually overridden.
--- WabaDark.categoryTintSettings (category -> setting) lets the master
+-- WabaUI.categoryTintSettings (category -> setting) lets the master
 -- swatch push a new color into every one of these at once.
 local function CreateColorSwatch(category, tintCategory, label)
-    local variable = "WABADARK_COLOR_" .. tintCategory:upper()
+    local variable = "WABAUI_COLOR_" .. tintCategory:upper()
     local setting = Settings.RegisterAddOnSetting(category, variable, tintCategory,
-        WabaDarkSettingsDB.categoryTintColor, Settings.VarType.String, label .. " color",
-        WabaDarkSettingsDB.tintColor or WabaDark.DEFAULT_TINT_COLOR)
+        WabaUISettingsDB.categoryTintColor, Settings.VarType.String, label .. " color",
+        WabaUISettingsDB.tintColor or WabaUI.DEFAULT_TINT_COLOR)
     setting:SetValueChangedCallback(function(_, value)
-        WabaDark:RefreshCategory(tintCategory)
+        WabaUI:RefreshCategory(tintCategory)
     end)
     Settings.CreateColorSwatch(category, setting,
         "This panel's own tint color, overriding the master tint color above just for it.")
-    WabaDark.categoryTintSettings[tintCategory] = setting
+    WabaUI.categoryTintSettings[tintCategory] = setting
 end
 
 local function CreateSliders(category, infoList, sliderOptions)
     for _, info in ipairs(infoList) do
-        local variable = "WABADARK_INTENSITY_" .. info.key:upper()
+        local variable = "WABAUI_INTENSITY_" .. info.key:upper()
         local setting = Settings.RegisterAddOnSetting(category, variable, info.key,
-            WabaDarkSettingsDB.intensity, Settings.VarType.Number, info.label, WabaDark.DEFAULT_INTENSITY[info.key])
+            WabaUISettingsDB.intensity, Settings.VarType.Number, info.label, WabaUI.DEFAULT_INTENSITY[info.key])
         setting:SetValueChangedCallback(function(_, value)
-            WabaDark:RefreshCategory(info.key)
+            WabaUI:RefreshCategory(info.key)
         end)
         Settings.CreateSlider(category, setting, sliderOptions, info.tooltip)
         if info.key ~= "overall" then
@@ -83,8 +83,8 @@ local function CreateSliders(category, infoList, sliderOptions)
     end
 end
 
--- One checkbox + one slider per entry (WabaDark.ACTION_BARS and
--- WabaDark.OVERALL_LINKED_EXTRAS, both built in Skin.lua). The checkbox
+-- One checkbox + one slider per entry (WabaUI.ACTION_BARS and
+-- WabaUI.OVERALL_LINKED_EXTRAS, both built in Skin.lua). The checkbox
 -- picks whether that entry darkens with its own slider or rides the master
 -- "Action bar darkness" slider above; its own slider only matters when
 -- unchecked. Its color swatch is always independent of the checkbox, though
@@ -93,21 +93,21 @@ end
 local function CreateOverallLinkedControls(category, sliderOptions, entries)
     for _, entry in ipairs(entries) do
         local useOverallSetting = Settings.RegisterAddOnSetting(category,
-            "WABADARK_ACTIONBAR_USEOVERALL_" .. entry.key:upper(), entry.category,
-            WabaDarkSettingsDB.actionBarUseOverall, Settings.VarType.Boolean,
+            "WABAUI_ACTIONBAR_USEOVERALL_" .. entry.key:upper(), entry.category,
+            WabaUISettingsDB.actionBarUseOverall, Settings.VarType.Boolean,
             "Use overall slider for " .. entry.label, true)
         useOverallSetting:SetValueChangedCallback(function(_, value)
-            WabaDark:RefreshCategory(entry.category)
+            WabaUI:RefreshCategory(entry.category)
         end)
         Settings.CreateCheckbox(category, useOverallSetting,
             "Uncheck to darken the " .. entry.label .. " with its own slider below instead of the overall action bar slider.")
 
-        local variable = "WABADARK_INTENSITY_" .. entry.category:upper()
+        local variable = "WABAUI_INTENSITY_" .. entry.category:upper()
         local intensitySetting = Settings.RegisterAddOnSetting(category, variable, entry.category,
-            WabaDarkSettingsDB.intensity, Settings.VarType.Number, entry.label .. " darkness",
-            WabaDark.DEFAULT_INTENSITY[entry.category])
+            WabaUISettingsDB.intensity, Settings.VarType.Number, entry.label .. " darkness",
+            WabaUI.DEFAULT_INTENSITY[entry.category])
         intensitySetting:SetValueChangedCallback(function(_, value)
-            WabaDark:RefreshCategory(entry.category)
+            WabaUI:RefreshCategory(entry.category)
         end)
         Settings.CreateSlider(category, intensitySetting, sliderOptions,
             "Used instead of the overall action bar slider when the checkbox above is unchecked.")
@@ -117,12 +117,12 @@ local function CreateOverallLinkedControls(category, sliderOptions, entries)
 end
 
 local function CreateOptionsPanel()
-    local category = Settings.RegisterVerticalLayoutCategory("WabaDark")
+    local category = Settings.RegisterVerticalLayoutCategory("WabaUI")
 
-    local enabledSetting = Settings.RegisterAddOnSetting(category, "WABADARK_ENABLED", "enabled",
-        WabaDarkSettingsDB, Settings.VarType.Boolean, "Enable dark mode", true)
+    local enabledSetting = Settings.RegisterAddOnSetting(category, "WABAUI_ENABLED", "enabled",
+        WabaUISettingsDB, Settings.VarType.Boolean, "Enable dark mode", true)
     enabledSetting:SetValueChangedCallback(function(_, value)
-        WabaDark:SetEnabled(value)
+        WabaUI:SetEnabled(value)
     end)
     Settings.CreateCheckbox(category, enabledSetting,
         "Reskin standard panels, the minimap border, action bars, and chat frames in dark tones.")
@@ -130,19 +130,19 @@ local function CreateOptionsPanel()
     -- category -> setting, filled in by CreateColorSwatch below as each
     -- panel's swatch is created, so the master swatch's callback (further
     -- down) can push a new color into every one of them at once.
-    WabaDark.categoryTintSettings = {}
+    WabaUI.categoryTintSettings = {}
 
     -- A quick "set every panel to this color" tool, independent of the
     -- per-category darkness sliders below: darkness controls how far a
     -- piece lerps toward its color, this just bulk-writes that color.
-    -- Defaults to the near-black WabaDark always used before this was
+    -- Defaults to the near-black WabaUI always used before this was
     -- configurable. Each panel below still has its own swatch to give it a
     -- different color afterward - this one doesn't stay "linked", it's a
     -- one-time push, not a live master.
-    local tintColorSetting = Settings.RegisterAddOnSetting(category, "WABADARK_TINT_COLOR", "tintColor",
-        WabaDarkSettingsDB, Settings.VarType.String, "Tint color (all panels)", WabaDark.DEFAULT_TINT_COLOR)
+    local tintColorSetting = Settings.RegisterAddOnSetting(category, "WABAUI_TINT_COLOR", "tintColor",
+        WabaUISettingsDB, Settings.VarType.String, "Tint color (all panels)", WabaUI.DEFAULT_TINT_COLOR)
     tintColorSetting:SetValueChangedCallback(function(_, value)
-        WabaDark:SetAllCategoryTintColors(value)
+        WabaUI:SetAllCategoryTintColors(value)
     end)
     Settings.CreateColorSwatch(category, tintColorSetting,
         "Sets every panel below to this color at once. Change any panel's own swatch afterward to give it a different color.")
@@ -154,17 +154,17 @@ local function CreateOptionsPanel()
     local actionBarsSubcategory = Settings.RegisterVerticalLayoutSubcategory(category, "Action Bars")
     CreateSliders(actionBarsSubcategory, ACTION_BAR_INTENSITY, sliderOptions)
 
-    local forceArtSetting = Settings.RegisterAddOnSetting(actionBarsSubcategory, "WABADARK_FORCE_ACTIONBAR_ART",
-        "forceActionBarArt", WabaDarkSettingsDB, Settings.VarType.Boolean, "Match extra bars' art to the main bar", true)
+    local forceArtSetting = Settings.RegisterAddOnSetting(actionBarsSubcategory, "WABAUI_FORCE_ACTIONBAR_ART",
+        "forceActionBarArt", WabaUISettingsDB, Settings.VarType.Boolean, "Match extra bars' art to the main bar", true)
     forceArtSetting:SetValueChangedCallback(function(_, value)
-        WabaDark:SetForceActionBarArt(value)
+        WabaUI:SetForceActionBarArt(value)
     end)
     Settings.CreateCheckbox(actionBarsSubcategory, forceArtSetting,
         "Forces the Main Action Bar's ornate button border onto the extra action bars (MultiBar1-7), " ..
         "for bars whose own Edit Mode \"Hide Bar Art\" checkbox isn't reachable in this client.")
 
-    CreateOverallLinkedControls(actionBarsSubcategory, sliderOptions, WabaDark.ACTION_BARS)
-    CreateOverallLinkedControls(actionBarsSubcategory, sliderOptions, WabaDark.OVERALL_LINKED_EXTRAS)
+    CreateOverallLinkedControls(actionBarsSubcategory, sliderOptions, WabaUI.ACTION_BARS)
+    CreateOverallLinkedControls(actionBarsSubcategory, sliderOptions, WabaUI.OVERALL_LINKED_EXTRAS)
 
     local unitFramesSubcategory = Settings.RegisterVerticalLayoutSubcategory(category, "Unit Frames")
     CreateSliders(unitFramesSubcategory, UNIT_FRAME_INTENSITY, sliderOptions)
@@ -173,10 +173,10 @@ local function CreateOptionsPanel()
     CreateSliders(windowsSubcategory, WINDOW_INTENSITY, sliderOptions)
 
     Settings.RegisterAddOnCategory(category)
-    WabaDark.optionsCategoryID = category:GetID()
+    WabaUI.optionsCategoryID = category:GetID()
 end
 
-function WabaDark:SetEnabled(enabled)
+function WabaUI:SetEnabled(enabled)
     self.settings.enabled = enabled
     if enabled then
         self:ApplyAll()
@@ -187,11 +187,11 @@ end
 
 -- Pushes hex into every per-category color setting (see CreateColorSwatch),
 -- as if the player had opened each panel's own swatch and picked the same
--- color. Going through setting:SetValue (not writing WabaDarkSettingsDB.
+-- color. Going through setting:SetValue (not writing WabaUISettingsDB.
 -- categoryTintColor directly) keeps each swatch's own displayed color and
 -- its SetValueChangedCallback/RefreshCategory in sync, the same as if a
 -- person clicked it themselves.
-function WabaDark:SetAllCategoryTintColors(hex)
+function WabaUI:SetAllCategoryTintColors(hex)
     for _, setting in pairs(self.categoryTintSettings or {}) do
         setting:SetValue(hex)
     end
@@ -200,59 +200,59 @@ end
 frame:SetScript("OnEvent", function(self, event, ...)
     if event == "ADDON_LOADED" then
         local loadedAddon = ...
-        if loadedAddon == "WabaDark" then
-            WabaDarkSettingsDB = WabaDarkSettingsDB or { enabled = true }
-            if WabaDarkSettingsDB.forceActionBarArt == nil then
-                WabaDarkSettingsDB.forceActionBarArt = true
+        if loadedAddon == "WabaUI" then
+            WabaUISettingsDB = WabaUISettingsDB or { enabled = true }
+            if WabaUISettingsDB.forceActionBarArt == nil then
+                WabaUISettingsDB.forceActionBarArt = true
             end
-            WabaDarkSettingsDB.tintColor = WabaDarkSettingsDB.tintColor or WabaDark.DEFAULT_TINT_COLOR
-            WabaDarkSettingsDB.intensity = WabaDarkSettingsDB.intensity or {}
-            WabaDarkSettingsDB.categoryTintColor = WabaDarkSettingsDB.categoryTintColor or {}
-            for key, default in pairs(WabaDark.DEFAULT_INTENSITY) do
-                if WabaDarkSettingsDB.intensity[key] == nil then
-                    WabaDarkSettingsDB.intensity[key] = default
+            WabaUISettingsDB.tintColor = WabaUISettingsDB.tintColor or WabaUI.DEFAULT_TINT_COLOR
+            WabaUISettingsDB.intensity = WabaUISettingsDB.intensity or {}
+            WabaUISettingsDB.categoryTintColor = WabaUISettingsDB.categoryTintColor or {}
+            for key, default in pairs(WabaUI.DEFAULT_INTENSITY) do
+                if WabaUISettingsDB.intensity[key] == nil then
+                    WabaUISettingsDB.intensity[key] = default
                 end
                 -- "overall" isn't a real paintable category (see
                 -- CreateSliders in Core.lua), so it never gets its own
                 -- swatch and doesn't need a color entry here either.
-                if key ~= "overall" and WabaDarkSettingsDB.categoryTintColor[key] == nil then
-                    WabaDarkSettingsDB.categoryTintColor[key] = WabaDarkSettingsDB.tintColor
+                if key ~= "overall" and WabaUISettingsDB.categoryTintColor[key] == nil then
+                    WabaUISettingsDB.categoryTintColor[key] = WabaUISettingsDB.tintColor
                 end
             end
-            WabaDarkSettingsDB.actionBarUseOverall = WabaDarkSettingsDB.actionBarUseOverall or {}
-            for _, bar in ipairs(WabaDark.ACTION_BARS) do
-                if WabaDarkSettingsDB.actionBarUseOverall[bar.category] == nil then
-                    WabaDarkSettingsDB.actionBarUseOverall[bar.category] = true
+            WabaUISettingsDB.actionBarUseOverall = WabaUISettingsDB.actionBarUseOverall or {}
+            for _, bar in ipairs(WabaUI.ACTION_BARS) do
+                if WabaUISettingsDB.actionBarUseOverall[bar.category] == nil then
+                    WabaUISettingsDB.actionBarUseOverall[bar.category] = true
                 end
             end
-            for _, extra in ipairs(WabaDark.OVERALL_LINKED_EXTRAS) do
-                if WabaDarkSettingsDB.actionBarUseOverall[extra.category] == nil then
-                    WabaDarkSettingsDB.actionBarUseOverall[extra.category] = true
+            for _, extra in ipairs(WabaUI.OVERALL_LINKED_EXTRAS) do
+                if WabaUISettingsDB.actionBarUseOverall[extra.category] == nil then
+                    WabaUISettingsDB.actionBarUseOverall[extra.category] = true
                 end
             end
-            WabaDark.settings = WabaDarkSettingsDB
+            WabaUI.settings = WabaUISettingsDB
             CreateOptionsPanel()
-            if WabaDark.settings.enabled then
-                WabaDark:ApplyAll()
+            if WabaUI.settings.enabled then
+                WabaUI:ApplyAll()
             end
         end
     end
 end)
 
-SLASH_WABADARK1 = "/wabadark"
-SlashCmdList["WABADARK"] = function(msg)
+SLASH_WABAUI1 = "/wabaui"
+SlashCmdList["WABAUI"] = function(msg)
     local cmd = (msg or ""):match("^(%S*)"):lower()
 
     if cmd == "on" then
-        WabaDark:SetEnabled(true)
-        print("|cff33ff99WabaDark|r: dark mode ON")
+        WabaUI:SetEnabled(true)
+        print("|cff33ff99WabaUI|r: dark mode ON")
     elseif cmd == "off" then
-        WabaDark:SetEnabled(false)
-        print("|cff33ff99WabaDark|r: dark mode OFF")
+        WabaUI:SetEnabled(false)
+        print("|cff33ff99WabaUI|r: dark mode OFF")
     elseif cmd == "options" then
-        Settings.OpenToCategory(WabaDark.optionsCategoryID)
+        Settings.OpenToCategory(WabaUI.optionsCategoryID)
     else
-        print("|cff33ff99WabaDark|r: dark mode " .. (WabaDark.settings.enabled and "ON" or "OFF") ..
-            " (/wabadark on|off|options)")
+        print("|cff33ff99WabaUI|r: dark mode " .. (WabaUI.settings.enabled and "ON" or "OFF") ..
+            " (/wabaui on|off|options)")
     end
 end

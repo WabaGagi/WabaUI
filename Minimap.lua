@@ -1,10 +1,10 @@
 -- Minimap.lua: a small draggable minimap button, no external library
 -- (LibDBIcon) - self-contained to match the rest of this addon. Position
--- is stored as an angle around the ring, persisted in WabaDarkSettingsDB.
+-- is stored as an angle around the ring, persisted in WabaUISettingsDB.
 
 local ICON = 236151 -- Interface\Icons\ability_druid_eclipse
 
-local button = CreateFrame("Button", "WabaDarkMinimapButton", Minimap)
+local button = CreateFrame("Button", "WabaUIMinimapButton", Minimap)
 button:SetSize(31, 31)
 button:SetFrameStrata("MEDIUM")
 button:SetFrameLevel(8)
@@ -30,7 +30,7 @@ local function GetRadius()
 end
 
 local function UpdatePosition()
-    local angle = math.rad(WabaDarkSettingsDB.minimapAngle or 220)
+    local angle = math.rad(WabaUISettingsDB.minimapAngle or 220)
     local radius = GetRadius()
     button:ClearAllPoints()
     button:SetPoint("CENTER", Minimap, "CENTER", math.cos(angle) * radius, math.sin(angle) * radius)
@@ -42,7 +42,7 @@ button:SetScript("OnDragStart", function(self)
         local px, py = GetCursorPosition()
         local scale = Minimap:GetEffectiveScale()
         px, py = px / scale, py / scale
-        WabaDarkSettingsDB.minimapAngle = math.deg(math.atan2(py - my, px - mx))
+        WabaUISettingsDB.minimapAngle = math.deg(math.atan2(py - my, px - mx))
         UpdatePosition()
     end)
 end)
@@ -53,17 +53,17 @@ end)
 
 button:SetScript("OnClick", function(self, mouseButton)
     if mouseButton == "RightButton" then
-        Settings.OpenToCategory(WabaDark.optionsCategoryID)
+        Settings.OpenToCategory(WabaUI.optionsCategoryID)
     else
-        WabaDark:SetEnabled(not WabaDark.settings.enabled)
-        print("|cff33ff99WabaDark|r: dark mode " .. (WabaDark.settings.enabled and "ON" or "OFF"))
+        WabaUI:SetEnabled(not WabaUI.settings.enabled)
+        print("|cff33ff99WabaUI|r: dark mode " .. (WabaUI.settings.enabled and "ON" or "OFF"))
     end
 end)
 
 button:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-    GameTooltip:SetText("WabaDark")
-    GameTooltip:AddLine("Dark mode: " .. (WabaDark.settings.enabled and "ON" or "OFF"), 1, 1, 1)
+    GameTooltip:SetText("WabaUI")
+    GameTooltip:AddLine("Dark mode: " .. (WabaUI.settings.enabled and "ON" or "OFF"), 1, 1, 1)
     GameTooltip:AddLine(" ")
     GameTooltip:AddLine("Left-click: toggle on/off", 0.6, 0.6, 0.6)
     GameTooltip:AddLine("Right-click: options", 0.6, 0.6, 0.6)
@@ -75,8 +75,8 @@ button:SetScript("OnLeave", GameTooltip_Hide)
 local minimapButtonFrame = CreateFrame("Frame")
 minimapButtonFrame:RegisterEvent("ADDON_LOADED")
 minimapButtonFrame:SetScript("OnEvent", function(self, event, loadedAddon)
-    if loadedAddon == "WabaDark" then
-        WabaDarkSettingsDB.minimapAngle = WabaDarkSettingsDB.minimapAngle or 220
+    if loadedAddon == "WabaUI" then
+        WabaUISettingsDB.minimapAngle = WabaUISettingsDB.minimapAngle or 220
         UpdatePosition()
     end
 end)

@@ -2,7 +2,7 @@
 -- bars, and chat frames by multiplying their existing textures' vertex
 -- color - no custom art ships with this addon. Every tint is reversible:
 -- each touched piece remembers its original color from the first time it
--- was seen, so toggling WabaDark off restores the exact original look.
+-- was seen, so toggling WabaUI off restores the exact original look.
 --
 -- Darkness is per-category and lives on a 0-1 slider (Core.lua wires these
 -- up in the options panel): different UI areas need different amounts of
@@ -12,8 +12,8 @@
 -- other category, for a single quick dimmer that doesn't erase the
 -- per-category ratios.
 
-WabaDark = WabaDark or {}
-local WabaDark = WabaDark
+WabaUI = WabaUI or {}
+local WabaUI = WabaUI
 
 -- Every action bar this addon treats individually, for both darkening and
 -- (for the extra bars) forced matching art - see the "Extra action bar art"
@@ -30,7 +30,7 @@ local ACTION_BARS = {
     { key = "extra2",      name = "MultiBar6",           category = "actionbar_extra2",      label = "Extra action bar 2",        isMain = false, horizontal = true },
     { key = "extra3",      name = "MultiBar7",           category = "actionbar_extra3",      label = "Extra action bar 3",        isMain = false, horizontal = true },
 }
-WabaDark.ACTION_BARS = ACTION_BARS -- Core.lua builds a checkbox + slider per bar from this same list
+WabaUI.ACTION_BARS = ACTION_BARS -- Core.lua builds a checkbox + slider per bar from this same list
 
 local ACTION_BAR_BY_NAME = {}
 for _, bar in ipairs(ACTION_BARS) do
@@ -47,7 +47,7 @@ local OVERALL_LINKED_EXTRAS = {
     { key = "bags", category = "bagbar", label = "Bag bar" },
     { key = "endcaps", category = "actionbar_endcaps", label = "Gryphon-head end caps" },
 }
-WabaDark.OVERALL_LINKED_EXTRAS = OVERALL_LINKED_EXTRAS
+WabaUI.OVERALL_LINKED_EXTRAS = OVERALL_LINKED_EXTRAS
 
 -- Vertex-color tinting is multiplicative (result = texture * tint), so it
 -- can only ever darken a texture's existing hue, never neutralize it - a
@@ -57,10 +57,10 @@ WabaDark.OVERALL_LINKED_EXTRAS = OVERALL_LINKED_EXTRAS
 -- nine-slice panel's fill, which is allowed to go a touch darker than its
 -- border for definition). Each category has its own tint color, defaulting
 -- to whatever the master "Tint color" swatch held when that category was
--- first seen (WabaDark.settings.categoryTintColor) - "darkness" (how far a
+-- first seen (WabaUI.settings.categoryTintColor) - "darkness" (how far a
 -- piece lerps) and "tint color" (what it lerps toward) are two independent
 -- controls, and every panel can be given its own of each.
-WabaDark.DEFAULT_INTENSITY = {
+WabaUI.DEFAULT_INTENSITY = {
     overall = 1.0,
     character = 0.85,
     bags = 0.85,
@@ -81,16 +81,16 @@ WabaDark.DEFAULT_INTENSITY = {
     other = 0.85, -- anything ShowUIPanel catches that isn't in FRAME_CATEGORIES below
 }
 for _, bar in ipairs(ACTION_BARS) do
-    WabaDark.DEFAULT_INTENSITY[bar.category] = WabaDark.DEFAULT_INTENSITY.actionbars
+    WabaUI.DEFAULT_INTENSITY[bar.category] = WabaUI.DEFAULT_INTENSITY.actionbars
 end
 for _, extra in ipairs(OVERALL_LINKED_EXTRAS) do
-    WabaDark.DEFAULT_INTENSITY[extra.category] = WabaDark.DEFAULT_INTENSITY.actionbars
+    WabaUI.DEFAULT_INTENSITY[extra.category] = WabaUI.DEFAULT_INTENSITY.actionbars
 end
 
 -- Default tint color (AARRGGBB, the format CreateColorFromHexString/
 -- Settings.CreateColorSwatch both use): near-black, matching the fixed
 -- DARK_TARGET this addon used before the color picker was added.
-WabaDark.DEFAULT_TINT_COLOR = "FF0D0D0F"
+WabaUI.DEFAULT_TINT_COLOR = "FF0D0D0F"
 
 -- A nine-slice panel's fill is allowed to go a touch darker than its
 -- border for definition - previously a separate fixed color
@@ -99,7 +99,7 @@ WabaDark.DEFAULT_TINT_COLOR = "FF0D0D0F"
 local CENTER_TARGET_SCALE = 0.4
 
 -- GetDarkTarget/GetCenterDarkTarget are called per-category (each panel can
--- now have its own color - see WabaDark.categoryTintSettings in Core.lua)
+-- now have its own color - see WabaUI.categoryTintSettings in Core.lua)
 -- from hooks that can fire many times a second (NineSliceUtil.ApplyLayout,
 -- MainActionBarMixin:UpdateDividers - tooltips and layout churn re-trigger
 -- these constantly), so re-parsing a hex string and allocating a new Color +
@@ -111,11 +111,11 @@ local CENTER_TARGET_SCALE = 0.4
 local tintTargetCache = {} -- category -> { hex = "AARRGGBB", dark = {r,g,b}, center = {r,g,b} }
 
 local function ResolveCategoryTintColorHex(category)
-    local settings = WabaDark.settings
+    local settings = WabaUI.settings
     local perCategory = settings and settings.categoryTintColor
     local hex = perCategory and perCategory[category]
     if not hex or hex == "" then
-        hex = (settings and settings.tintColor) or WabaDark.DEFAULT_TINT_COLOR
+        hex = (settings and settings.tintColor) or WabaUI.DEFAULT_TINT_COLOR
     end
     return hex
 end
@@ -129,7 +129,7 @@ local function GetTintTargets(category)
     end
     local ok, color = pcall(CreateColorFromHexString, hex)
     if not ok or not color then
-        ok, color = pcall(CreateColorFromHexString, WabaDark.DEFAULT_TINT_COLOR)
+        ok, color = pcall(CreateColorFromHexString, WabaUI.DEFAULT_TINT_COLOR)
     end
     local r, g, b
     if ok and color then
@@ -156,27 +156,27 @@ local function GetCenterDarkTarget(category)
     return GetTintTargets(category).center
 end
 
-WabaDark.tinted = {}         -- list of { category = "character", apply = function(enabled) ... end }
-WabaDark.tintedByFrame = {}  -- container/region -> its entry in WabaDark.tinted, for de-dup
+WabaUI.tinted = {}         -- list of { category = "character", apply = function(enabled) ... end }
+WabaUI.tintedByFrame = {}  -- container/region -> its entry in WabaUI.tinted, for de-dup
 
 local function IsEnabled()
-    return WabaDark.settings and WabaDark.settings.enabled
+    return WabaUI.settings and WabaUI.settings.enabled
 end
 
 -- Each individual action bar can either ride the master "actionbars" slider
--- or use its own (WabaDark.settings.actionBarUseOverall[category], a
+-- or use its own (WabaUI.settings.actionBarUseOverall[category], a
 -- per-bar checkbox wired up in Core.lua) - resolve that redirection once
 -- here so every other category keeps working exactly as before.
 local function GetIntensity(category)
-    local settings = WabaDark.settings
+    local settings = WabaUI.settings
     local useOverall = settings and settings.actionBarUseOverall and settings.actionBarUseOverall[category]
     local effectiveCategory = useOverall and "actionbars" or category
     local intensity = settings and settings.intensity
     local value = intensity and intensity[effectiveCategory]
     if value == nil then
-        value = WabaDark.DEFAULT_INTENSITY[effectiveCategory] or WabaDark.DEFAULT_INTENSITY.other
+        value = WabaUI.DEFAULT_INTENSITY[effectiveCategory] or WabaUI.DEFAULT_INTENSITY.other
     end
-    local overall = (intensity and intensity.overall) or WabaDark.DEFAULT_INTENSITY.overall
+    local overall = (intensity and intensity.overall) or WabaUI.DEFAULT_INTENSITY.overall
     return value * overall
 end
 
@@ -193,7 +193,7 @@ end
 -- capture the original color once, register a reversible apply(enabled)
 -- closure, and de-dup by the texture object itself.
 local function TintSingleTexture(texture, category)
-    if not texture or WabaDark.tintedByFrame[texture] then
+    if not texture or WabaUI.tintedByFrame[texture] then
         return
     end
     local r, g, b, a = texture:GetVertexColor()
@@ -206,8 +206,8 @@ local function TintSingleTexture(texture, category)
         end
     end
     local entry = { category = category, apply = apply }
-    WabaDark.tintedByFrame[texture] = entry
-    table.insert(WabaDark.tinted, entry)
+    WabaUI.tintedByFrame[texture] = entry
+    table.insert(WabaUI.tinted, entry)
     apply(IsEnabled())
 end
 
@@ -234,8 +234,8 @@ end
 -- in at call time rather than captured, because the SAME container can
 -- first be seen via the generic ApplyLayout hook (no context, "other") and
 -- later recognized as belonging to a specific panel (e.g. CharacterFrame.
--- NineSlice) - see the category-upgrade logic in WabaDark:TintNineSlice.
-function WabaDark:TintNineSlice(container, category)
+-- NineSlice) - see the category-upgrade logic in WabaUI:TintNineSlice.
+function WabaUI:TintNineSlice(container, category)
     if not container or not container.SetBorderColor or not container.SetCenterColor then
         return
     end
@@ -261,7 +261,7 @@ function WabaDark:TintNineSlice(container, category)
 end
 
 hooksecurefunc(NineSliceUtil, "ApplyLayout", function(container)
-    WabaDark:TintNineSlice(container)
+    WabaUI:TintNineSlice(container)
 end)
 
 -- Plain textures that aren't nine-slice panels. This client (WoW Forever /
@@ -296,7 +296,7 @@ local function TintTextureRegionsOf(frame, category)
                 -- PortraitFrameBaseTemplate) - route through the dedicated
                 -- handler instead of tinting its pieces as loose regions,
                 -- so there's exactly one place that owns its original color.
-                WabaDark:TintNineSlice(child, category)
+                WabaUI:TintNineSlice(child, category)
             elseif child.GetRegions then
                 TintTextureRegionsOf(child, category)
             end
@@ -314,7 +314,7 @@ end
 -- the way to black, that same dark text loses all contrast against it.
 -- Retail has its own light/dark text switch for this (QuestTextContrast),
 -- but this client's Lua doesn't carry that accessibility feature, so
--- WabaDark brightens the text itself, blending it toward a warm light
+-- WabaUI brightens the text itself, blending it toward a warm light
 -- target with the SAME per-category intensity used to darken the
 -- background - the two always move together on one slider.
 local LIGHT_TEXT_TARGET = { 0.95, 0.89, 0.72 }
@@ -333,7 +333,7 @@ local function TintSingleFontString(fontString, category)
     end
     local r, g, b, a = fontString:GetTextColor()
     local original = { r or 1, g or 1, b or 1, a or 1 }
-    local entry = WabaDark.tintedByFrame[fontString]
+    local entry = WabaUI.tintedByFrame[fontString]
     if entry then
         entry.original = original
     else
@@ -345,8 +345,8 @@ local function TintSingleFontString(fontString, category)
                 fontString:SetTextColor(unpack(entry.original))
             end
         end
-        WabaDark.tintedByFrame[fontString] = entry
-        table.insert(WabaDark.tinted, entry)
+        WabaUI.tintedByFrame[fontString] = entry
+        table.insert(WabaUI.tinted, entry)
     end
     entry.apply(IsEnabled())
 end
@@ -792,21 +792,21 @@ end
 -- color rather than a stretched image, it doesn't distort on the vertical
 -- bars the way BorderArt's atlas would, so every bar gets one, not just the
 -- horizontal ones - and it's plugged into the normal tinted-texture list
--- (WabaDark.tinted) like everything else, so it darkens with the same
--- slider and disappears (not just lightens) when WabaDark is turned off,
--- matching "toggling WabaDark off restores the exact original look" - a
+-- (WabaUI.tinted) like everything else, so it darkens with the same
+-- slider and disappears (not just lightens) when WabaUI is turned off,
+-- matching "toggling WabaUI off restores the exact original look" - a
 -- panel Blizzard never drew shouldn't linger at some in-between color.
 local PANEL_BASE_COLOR = { 0.35, 0.27, 0.16, 1 }
 
 local function EnsureBackgroundPanel(bar, category)
-    if bar.WabaDarkBackgroundPanel then
-        return bar.WabaDarkBackgroundPanel
+    if bar.WabaUIBackgroundPanel then
+        return bar.WabaUIBackgroundPanel
     end
     local panel = bar:CreateTexture(nil, "BACKGROUND", nil, -4)
     panel:SetColorTexture(unpack(PANEL_BASE_COLOR))
     panel:SetPoint("TOPLEFT", bar, "TOPLEFT", -6, 6)
     panel:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 4, -5)
-    bar.WabaDarkBackgroundPanel = panel
+    bar.WabaUIBackgroundPanel = panel
 
     -- Declared, then assigned separately (not `local entry = { ... entry ... }`)
     -- because the closure below needs to see this SAME local on every call -
@@ -823,8 +823,8 @@ local function EnsureBackgroundPanel(bar, category)
             end
         end,
     }
-    WabaDark.tintedByFrame[panel] = entry
-    table.insert(WabaDark.tinted, entry)
+    WabaUI.tintedByFrame[panel] = entry
+    table.insert(WabaUI.tinted, entry)
     entry.apply(IsEnabled())
 
     return panel
@@ -865,14 +865,14 @@ local function SetBarArt(bar, barEntry, showOrnateArt)
     -- color on this client, which would otherwise silently undo darkening
     -- every time bar art gets forced again (e.g. on every Edit Mode visit).
     TintTextureRegionsOf(bar, barEntry.category)
-    WabaDark:RefreshCategory(barEntry.category)
+    WabaUI:RefreshCategory(barEntry.category)
 end
 
 -- Re-applies the current setting to every extra bar. Deferred a frame via
 -- C_Timer.After so this never runs on the same call stack as whatever
 -- triggered it (login, a settings checkbox, Edit Mode opening) - a hook
 -- that did real work inline here once tainted a whole Edit Mode entry.
-function WabaDark:RefreshForcedActionBarArt()
+function WabaUI:RefreshForcedActionBarArt()
     C_Timer.After(0, function()
         local enabled = self.settings and self.settings.forceActionBarArt
         for _, barEntry in ipairs(ACTION_BARS) do
@@ -886,7 +886,7 @@ function WabaDark:RefreshForcedActionBarArt()
     end)
 end
 
-function WabaDark:SetForceActionBarArt(enabled)
+function WabaUI:SetForceActionBarArt(enabled)
     self.settings.forceActionBarArt = enabled
     self:RefreshForcedActionBarArt()
 end
@@ -906,11 +906,11 @@ hooksecurefunc(EditModeActionBarSystemMixin, "UpdateSystemSettingHideBarArt", fu
     if not barEntry then
         return
     end
-    if not barEntry.isMain and WabaDark.settings and WabaDark.settings.forceActionBarArt then
-        WabaDark:RefreshForcedActionBarArt()
+    if not barEntry.isMain and WabaUI.settings and WabaUI.settings.forceActionBarArt then
+        WabaUI:RefreshForcedActionBarArt()
     else
         C_Timer.After(0, function()
-            WabaDark:RefreshCategory(barEntry.category)
+            WabaUI:RefreshCategory(barEntry.category)
         end)
     end
 end)
@@ -991,20 +991,20 @@ local function SkinPersistentFrames()
         TintTextureRegionsOf(_G["ChatFrame" .. i .. "Tab"], "chat")
     end
 
-    WabaDark:RefreshForcedActionBarArt()
+    WabaUI:RefreshForcedActionBarArt()
 end
 
 local skinFrame = CreateFrame("Frame")
 skinFrame:RegisterEvent("PLAYER_LOGIN")
 skinFrame:SetScript("OnEvent", SkinPersistentFrames)
 
-function WabaDark:ApplyAll()
+function WabaUI:ApplyAll()
     for _, entry in ipairs(self.tinted) do
         entry.apply(true)
     end
 end
 
-function WabaDark:RevertAll()
+function WabaUI:RevertAll()
     for _, entry in ipairs(self.tinted) do
         entry.apply(false)
     end
@@ -1017,7 +1017,7 @@ end
 -- also refreshes any individual action bar currently set to "use overall",
 -- since those entries are still tagged with their own actionbar_* category,
 -- not "actionbars" - GetIntensity is what actually redirects them.
-function WabaDark:RefreshCategory(category)
+function WabaUI:RefreshCategory(category)
     local enabled = IsEnabled()
     local useOverallMap = self.settings and self.settings.actionBarUseOverall
     for _, entry in ipairs(self.tinted) do
