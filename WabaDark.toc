@@ -1,0 +1,10 @@
+## Interface: @toc-version-forever@
+## Title: WabaDark
+## Notes: Dark-mode reskin for standard UI panels, the minimap, and chat frames
+## Author: codey2557
+## Version: 0.2.0
+## SavedVariables: WabaDarkSettingsDB
+
+Core.lua
+Skin.lua
+Minimap.lua
