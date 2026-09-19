@@ -1,7 +1,7 @@
 ## Interface: @toc-version-forever@
 ## Title: WabaUI
 ## Notes: Recolor and darken standard UI panels, the minimap, action bars, and chat frames
-## Author: codey2557
+## Author: WabaGagi
 ## Version: 0.3.0
 ## SavedVariables: WabaUISettingsDB
 
