@@ -12,7 +12,7 @@
 ## Title: WabaUI
 ## Notes: Recolor and darken standard UI panels, the minimap, action bars, and chat frames
 ## Author: WabaGagi
-## Version: 0.4.2
+## Version: 0.4.3
 ## X-Curse-Project-ID: 1703216
 ## SavedVariables: WabaUISettingsDB
 
