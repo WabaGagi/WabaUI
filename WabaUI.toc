@@ -1,4 +1,14 @@
+# Interface-Forever is a packager-only directive (the game client itself
+# only reads the line above) that tells BigWigsMods/packager this addon
+# also supports the Forever flavor on CurseForge. 16001 is not a real
+# interface number - it's the placeholder every currently-published Forever
+# addon uses (confirmed via RareScanner's actual Forever-flavored upload),
+# because the packager's own Forever detection only recognizes a 5-digit
+# "16xxx" value and doesn't know this beta's real 6-digit numbering. Do not
+# "fix" this to match tools/deploy.sh's real interface number - that number
+# fails the packager's validation outright (see release-process notes).
 ## Interface: @toc-version-forever@
+## Interface-Forever: 16001
 ## Title: WabaUI
 ## Notes: Recolor and darken standard UI panels, the minimap, action bars, and chat frames
 ## Author: WabaGagi
