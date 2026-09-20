@@ -21,18 +21,6 @@ jobs:
       - name: Resolve TOC interface version
         run: sed -i 's/@toc-version-forever@/120100/' WabaUI.toc
 
-      # The packager's own game-type auto-detection only recognizes Forever
-      # via a 5-digit "16xxx" interface number (an older, unrelated
-      # convention - see release.sh's toc_to_type). This beta's real
-      # interface number is 120100 (see tools/deploy.sh), which matches
-      # nothing in that table, so auto-detection silently fell through to
-      # CurseForge's default "Retail" flavor (game_id 517) instead of
-      # Forever's own (88568) - confirmed on the CurseForge file listing
-      # after the first two releases. -g forever forces the correct flavor
-      # while still using this TOC's actual interface number for the
-      # reported game version.
       - uses: BigWigsMods/packager@v2
-        with:
-          args: -g forever
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
