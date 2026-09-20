@@ -21,6 +21,26 @@ jobs:
       - name: Resolve TOC interface version
         run: sed -i 's/@toc-version-forever@/120100/' WabaUI.toc
 
+      # Default invocation: uploads under whatever the base ## Interface:
+      # number auto-detects as (currently "Retail", since the packager has
+      # no case for a 6-digit interface number and falls back to that).
       - uses: BigWigsMods/packager@v2
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+
+      # A single run can't tag one upload with both flavors - the packager
+      # picks one game type per invocation and names the zip accordingly
+      # (this one comes out "WabaUI-X.Y.Z-forever.zip", confirmed in
+      # release.sh's filename_filter, so it can't collide with the plain
+      # upload above). -g forever needs the "## Interface-Forever: 16001"
+      # line in the TOC to pass the packager's own validation - see the
+      # comment above that line for why 16001 (not this beta's real
+      # interface number) is correct here. This is the same two-upload
+      # pattern real Forever-flavored CurseForge addons (e.g. RareScanner)
+      # use today.
+      - name: Also upload the Forever-flavored package
+        uses: BigWigsMods/packager@v2
+        with:
+          args: -g forever
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
